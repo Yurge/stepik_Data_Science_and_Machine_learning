@@ -21,8 +21,8 @@ students.columns = students.columns.str.lower()
 # Посмотрим на стандартные статистические данные студентов со стандартным ланчем и урезанным
 lunch_standard = students.query('lunch == "standard"') # 1й способ
 lunch_reduced = students[students.lunch == 'free/reduced']   # 2й способ
-#print(f'lunch_standard: \n {lunch_standard.describe()} \n '
-#      f'lunch_reduced: \n {lunch_reduced.describe()}')
+#print(f'lunch_standard: \n_values {lunch_standard.describe()} \n_values '
+#      f'lunch_reduced: \n_values {lunch_reduced.describe()}')
 
 
 # Посчитаем средние оценки в зависимости от пола

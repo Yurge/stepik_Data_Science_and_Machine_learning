@@ -28,7 +28,9 @@ lunch_reduced = students[students.lunch == 'free/reduced']   # 2й способ
 # Посчитаем средние оценки в зависимости от пола
 mean_score_by_gender = students.groupby('gender', as_index=False) \
     .agg({'math_score': 'mean', 'reading_score': 'mean', 'writing_score': 'mean'}) \
-    .rename(columns={'math_score': 'mean_math_score', 'reading_score': 'mean_reading_score', 'writing_score': 'mean_writing_score'})
+    .rename(columns={'math_score': 'mean_math_score',
+                     'reading_score': 'mean_reading_score',
+                     'writing_score': 'mean_writing_score'})
 
 
 # Отберем по 5 лучших парней и девушек по предмету Математика
@@ -71,7 +73,7 @@ main_role = dota.count_roles.value_counts()
 #ax.set_xlabel('Баллы по Математике')
 #ax.set_ylabel('Баллы по Чтению')
 
-#sns.scatterplot(x=df.x, y=df.y)
+#sns.scatterplot(x=df_train.x, y=df_train.y)
 
 # Тепловая карта генома
 #g = sns.heatmap(data=genome.iloc[:, 1:], cmap='viridis')

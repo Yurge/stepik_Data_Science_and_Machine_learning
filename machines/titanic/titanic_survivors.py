@@ -149,7 +149,7 @@ from sklearn.metrics import roc_curve, auc
 fpr, tpr, thresholds = roc_curve(y_test, y_predicted_prob[:,1])
 roc_auc= auc(fpr, tpr)
 plt.figure()
-plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % (roc_auc))
+plt.plot(fpr, tpr, label=f'ROC curve (area = {roc_auc:.3f})')
 plt.plot([0, 1], [0, 1] , 'k--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])

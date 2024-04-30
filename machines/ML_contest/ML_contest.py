@@ -3,16 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set(rc={'figure.figsize': (12, 6)})     # сразу зададим размер будущих графиков
+
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn import metrics
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 from sklearn.metrics import PrecisionRecallDisplay
 from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import classification_report
-
+from sklearn.ensemble import RandomForestClassifier
 
 # ЗАДАЧА: ПОЧЕМУ ПОЛЬЗОВАТЕЛИ НЕ ЗАКАНЧИВАЮТ КУРС НА СТЕПИКЕ?  КАК ПРЕДСКАЗАТЬ, ЧТО ПОЛЬЗОВАТЕЛЬ УЙДЕТ С КУРСА?
 
@@ -201,8 +201,8 @@ X = X.merge(users_data[['user_id', 'is_gone_user', 'passed_course']], how='outer
 
 
 # Посмотрев на данные X, мы понимаем, что нам НЕ нужны юзеры, которые зашли на курс и спокойно учатся,
-# т.е. у них passed_course == False  and  is_gone_user == False. Таких юзеров нужно убрать из выборки и вот как мы
-# это сделаем:
+# т.е. у них passed_course == False  and  is_gone_user == False. По ним мы потом будем предсказывать, дропнется или нет.
+# Таких юзеров нужно убрать из выборки и вот как мы это сделаем:
 X = X.query('passed_course == True or is_gone_user == True')
 # Давайте проверим себя, чтобы не получилось вариантов False - False
 # print(X.groupby(['passed_course', 'is_gone_user']).user_id.count())     # Всё верно
@@ -215,8 +215,8 @@ X = X.drop(['correct', 'started_attempt','is_gone_user', 'passed_course'], axis=
 
 # Посмотрим на р-значения колонок. Если оно сильно больше 0.05, то удалим их из X
 import statsmodels.api as sm
-logit_model=sm.Logit(y,X)
-result=logit_model.fit()
+# logit_model=sm.Logit(y,X)
+# result=logit_model.fit()
 # print(result.summary2())
 
 
@@ -227,14 +227,21 @@ result=logit_model.fit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
 
 # Найдём лучшие параметры дерева
-clf = DecisionTreeClassifier()
+# clf = DecisionTreeClassifier()
 tree_params = {'criterion': ['gini', 'entropy'],
-               'max_depth': range(2,20),
-               'max_features': range(3,10)}
-tree_grid = GridSearchCV(clf, tree_params, cv=5, n_jobs=-1, verbose=True)
-tree_grid.fit(X_train, y_train)
-best_clf = tree_grid.best_estimator_
+               'max_depth': range(2, 11),
+               'max_features': range(2, 10),
+               'min_samples_split': range(10, 100, 10),
+               'min_samples_leaf': range(0, 15, 5)}
+# tree_grid = GridSearchCV(clf, tree_params, cv=5, n_jobs=-1, verbose=True)
+# tree_grid.fit(X_train, y_train)
+#best_clf = tree_grid.best_estimator_
 # print(tree_grid.best_params_, '\n')
+
+# Сохраним лучшие параметры, чтобы больше не тратить время на их вычисление
+best_clf = DecisionTreeClassifier(criterion='entropy', max_depth=3, max_features=6,
+                                  min_samples_leaf=5, min_samples_split=39)
+best_clf.fit(X_train, y_train)
 print()
 
 
@@ -260,15 +267,16 @@ def all_metrics(y_test, y_pred, y_pred_prob):
     report = classification_report(y_test, y_pred)
     fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
     roc_auc = auc(fpr, tpr)
-    return (f'cnf_matrix = \n{cnf_matrix} \n{report} \nroc_auc = {roc_auc:.3f}\n')
+    return (f'cnf_matrix = \n{cnf_matrix} \n{report}     roc_auc       {roc_auc:.3f}\n'
+            f'________________________  END  ______________________')
 
 
-print(f'DecisionTree metrics: \n\n{all_metrics(y_test, y_predict, y_predicted_prob)}\n')
+# print(f'DecisionTree metrics: \n\n{all_metrics(y_test, y_predict, y_predicted_prob)}\n')
 
 
 # Построим график Precision-Recall
-display = PrecisionRecallDisplay.from_estimator(best_clf, X_test, y_test, name="LinearSVC", plot_chance_level=True)
-_ = display.ax_.set_title("2-class Precision-Recall curve")
+# display = PrecisionRecallDisplay.from_estimator(best_clf, X_test, y_test, name="LinearSVC", plot_chance_level=True)
+# _ = display.ax_.set_title("2-class Precision-Recall curve")
 
 
 # Обязательно строим график ROC-кривая
@@ -277,26 +285,51 @@ fpr, tpr, thresholds = roc_curve(y_test, y_predicted_prob)
 roc_auc = auc(fpr, tpr)
 plt.figure()
 plt.plot(fpr, tpr, label=f'ROC curve (area = {roc_auc: .3f})')
-plt.plot([0, 1], [0, 1] , 'k--')
+plt.plot([0, 1], [0, 1], 'k--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Receiver operating characteristic')
-plt.legend(loc="lower right")
-plt.show()
+plt.legend(loc='lower right')
+# plt.show()
 
 
-
+# -------------------------------------------    Logistic Regression     ----------------------------------------
 # Ещё можно применить логистическую регрессию. Давайте посмотрим на её метрики
 log_regression = LogisticRegression(max_iter=6000)
 log_regression.fit(X_train, y_train)
 y_predict_log_reg = log_regression.predict(X_test)
 y_predicted_prob_log_reg = log_regression.predict_proba(X_test)[:, 1]
 # y_predicted_prob_log_reg = np.where(y_predicted_prob_log_reg[:, 1] > 0.5, 1, 0)
-print(f'LogisticRegression metrics: \n\n{all_metrics(y_test, y_predict_log_reg, y_predicted_prob_log_reg)}\n')
-# Метрики Логистической Регрессии оказались чуть лучше.
+# print(f'LogisticRegression metrics: \n\n{all_metrics(y_test, y_predict_log_reg, y_predicted_prob_log_reg)}\n')
 
 
+# ----------------------------------------------    RandomForest     -------------------------------------------
+# Построим RandomForest, сохраним в переменную лучшие параметры и посмотрим на её метрики
+# clf_rf = RandomForestClassifier()
+tree_params_rf = {
+    'n_estimators': range(13, 16, 1),
+    'criterion': ['gini', 'entropy'],
+    'max_depth': range(6, 11),
+    'max_features': range(3, 5),
+    'min_samples_split': range(57, 63, 1),
+    'min_samples_leaf': range(12, 17, 1)
+}
+# tree_grid_rf = GridSearchCV(clf_rf, tree_params_rf, cv=5, n_jobs=-1, verbose=True)
+# tree_grid_rf.fit(X_train, y_train)
+# print(tree_grid_rf.best_params_, '\n')
+best_clf_rf = RandomForestClassifier(criterion='gini', max_depth=8, max_features=4,
+                                     min_samples_leaf=14, min_samples_split=62,
+                                     n_estimators=13)
+
+best_clf_rf.fit(X_train, y_train)
+y_predict_rf = best_clf_rf.predict(X_test)
+y_predicted_prob_rf = best_clf_rf.predict_proba(X_test)[:, 1]
+# print(f'RandomForest metrics: \n\n{all_metrics(y_test, y_predict_rf, y_predicted_prob_rf)}\n')
 
 
+# Посмотрим на значимость параметров в деревьях, т.е. как часто используется параметр при сплите
+imp = pd.DataFrame(best_clf_rf.feature_importances_, index=X_train.columns, columns=['importance'])
+imp.sort_values('importance').plot(kind='barh')
+# plt.show()

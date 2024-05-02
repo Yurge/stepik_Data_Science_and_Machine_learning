@@ -3,12 +3,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+sns.set_style(style='darkgrid', rc={'figure.figsize': (12, 6)})
 from graphviz import Source
 from IPython.display import SVG
 from IPython.display import display
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.metrics import precision_score, recall_score
+from sklearn.ensemble import RandomForestClassifier
 
 # СТОИТ ЗАДАЧА: ОБУЧИТЬ МАШИНУ, ЧТОБЫ ОНА ПРЕДСКАЗЫВАЛА, ПОГИБНЕТ ПАССАЖИР ТИТАНИКА ИЛИ НЕТ
 
@@ -106,14 +108,16 @@ better_scores = better_clf.score(X_test, y_test)
 
 # При помощи цикла мы "вручную" смогли выявить наилучшую глубину дерева, но конечно же в Pandas уже есть способы для
 # того, чтобы определять наилучшие параметры построения дерева (обучения)
+# Вычислим лучшие параметры и сохраним их в переменную best_clf
 clf = tree.DecisionTreeClassifier()
 tree_params = {'criterion': ['gini', 'entropy'],
                'max_depth': range(1,20),
                'max_features': range(4,10)}
 tree_grid = GridSearchCV(clf, tree_params, cv=5, n_jobs=-1, verbose=True)
 tree_grid.fit(X_train, y_train)
-best_clf = tree_grid.best_estimator_
 # print(tree_grid.best_params_, '\n', tree_grid.best_score_)
+best_clf = tree.DecisionTreeClassifier(criterion='entropy', max_depth=8, max_features=7)
+best_clf.fit(X_train, y_train)
 y_predict = best_clf.predict(X_test)
 precision = precision_score(y_test, y_predict)
 recall = recall_score(y_test, y_predict)
@@ -129,9 +133,10 @@ y_predicted_prob = best_clf.predict_proba(X_test)
 # но что делать с вероятностями в промежутке например 0.3-0.7 ?
 # Мы можем сказать программе, чтобы она относила к выжившим только вероятность > 0.8, остальных отнести к погибшим,
 # таким обазом будут меняться и значения precision и recall
-y_predict = np.where(y_predicted_prob[:, 1] > 0.82, 1, 0)
-precision = precision_score(y_test, y_predict)
-recall = recall_score(y_test, y_predict)
+
+# y_predict = np.where(y_predicted_prob[:, 1] > 0.82, 1, 0)
+# precision = precision_score(y_test, y_predict)
+# recall = recall_score(y_test, y_predict)
 # print(precision, recall)
 
 
@@ -157,4 +162,29 @@ plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Receiver operating characteristic')
 plt.legend(loc="lower right")
+# plt.show()
+
+
+# ----------------------------------------------    RandomForest     -------------------------------------------
+# Построим RandomForest, сохраним в переменную лучшие параметры
+# clf_rf = RandomForestClassifier()
+tree_params_rf = {
+    'n_estimators': range(13, 16),
+    'criterion': ['gini', 'entropy'],
+    'max_depth': range(3, 10),
+    'max_features': range(2, 6)
+}
+# tree_grid_rf = GridSearchCV(clf_rf, tree_params_rf, cv=5, n_jobs=-1, verbose=True)
+# tree_grid_rf.fit(X_train, y_train)
+# print(tree_grid_rf.best_params_, '\n')
+best_clf_rf = RandomForestClassifier(criterion='gini', max_depth=6, max_features=3, n_estimators=14)
+best_clf_rf.fit(X_train, y_train)
+y_predict_rf = best_clf_rf.predict(X_test)
+y_predicted_prob_rf = best_clf_rf.predict_proba(X_test)[:, 1]
+# print(f'RandomForest metrics: \n\n{all_metrics(y_test, y_predict_rf, y_predicted_prob_rf)}\n')
+
+
+# Посмотрим на значимость параметров в деревьях, т.е. как часто используется параметр при сплите
+imp = pd.DataFrame(best_clf_rf.feature_importances_, index=X_train.columns, columns=['importance'])
+imp.sort_values('importance').plot(kind='barh')
 plt.show()

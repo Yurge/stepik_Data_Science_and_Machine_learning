@@ -37,9 +37,19 @@ best_clf_rf.fit(X_train, y_train)
 
 # предскажем значения на тестовых данных и выведем их количество
 y_predict_rf = best_clf_rf.predict(warships_X_test)
-print(pd.Series(y_predict_rf).value_counts())
+# print(pd.Series(y_predict_rf).value_counts())
 
 # Посмотрим на значимость параметров в деревьях, т.е. как часто используется параметр при сплите
 imp = pd.DataFrame(best_clf_rf.feature_importances_, index=X_train.columns, columns=['importance'])
-imp.sort_values('importance').plot(kind='bar')
-print(imp.sort_values('importance'))
+# imp.sort_values('importance').plot(kind='bar')
+# print(imp.sort_values('importance'))
+
+
+
+# По следующему набору данных требуется понять какие два признака больше всего влияют на опасность в космосе
+dangers = pd.read_csv('/Users/yvvyds/PycharmProjects/stepik_Data_Science_and_Machine_learning/'
+                       'machines/warships/space_can_be_a_dangerous_place.csv')
+
+# print(dangers.corr().dangerous.sort_values())
+# Данные признаки больше всего влияют на опасность: buggers_were_noticed, nearby_system_has_planemo
+
